@@ -9,50 +9,73 @@ jobs:
   build-windows:
     name: Build Windows Exe
     runs-on: windows-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+          cache: npm
 
       - name: Install Dependencies
         run: npm install
 
       - name: Build Windows Executable
-        run: npx electron-builder --win -c.publish=never --config.extraMetadata.main=main.js
+        run: npx electron-builder --win --publish never -c.extraMetadata.main=main.js
+
+      - name: Check Build Output
+        shell: pwsh
+        run: |
+          Write-Host "Checking dist folder..."
+          Get-ChildItem -Path dist -Recurse
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ZArchiver-Windows-Setup
           path: dist/*.exe
+          if-no-files-found: error
+
 
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+          cache: npm
 
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: zulu
+          java-version: 17
 
-      - name: Prepare Web Assets & Build APK
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Prepare Web Assets
         run: |
-          npm install
           mkdir -p www
           cp -r index.html manifest.json sw.js main.js www/ 2>/dev/null || true
-          npx cap add android || true
-          npx cap sync android
+
+      - name: Add Android Platform
+        run: npx cap add android || true
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build Android APK
+        run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
@@ -62,3 +85,4 @@ jobs:
         with:
           name: ZArchiver-Android-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
