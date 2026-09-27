@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZArchiver Pro & Google Drive</title>
+  <style>
+    :root {
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --accent: #ffb74d;
+      --text: #ffffff;
+      --text-dim: #b0b0b0;
+      --border: #333333;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+    }
+    header {
+      background-color: var(--card-bg);
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 { margin: 0; font-size: 1.2rem; color: var(--accent); }
+    .tabs {
+      display: flex;
+      background: #181818;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-weight: bold;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .toolbar {
+      padding: 10px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      background-color: #181818;
+    }
+    button.btn {
+      background-color: #2a2a2a;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    button.btn:hover { background-color: #333; }
+    button.btn-accent { background-color: var(--accent); color: #000; font-weight: bold; }
+    .file-list {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .file-item {
+      background-color: var(--card-bg);
+      padding: 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid var(--border);
+    }
+    .file-info { display: flex; align-items: center; gap: 10px; }
+    .file-icon { font-size: 1.2rem; }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 400px;
+    }
+    input[type="text"], input[type="number"], input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      background: #121212;
+      border: 1px solid var(--border);
+      color: #fff;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>ZArchiver + Drive 📁</h1>
+    <span id="storage-status" style="font-size:0.8rem; color:var(--text-dim);">جاهز</span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('local')">الملفات المحلية</button>
+    <button class="tab-btn" onclick="switchTab('drive')">Google Drive</button>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn" onclick="document.getElementById('file-input').click()">اختيار ملف</button>
+    <input type="file" id="file-input" style="display:none;" onchange="handleFileSelect(event)">
+    
+    <button class="btn" onclick="openSplitModal()">تقسيم (Split)</button>
+    <button class="btn" onclick="openMergeModal()">دمج (Merge)</button>
+    
+    <!-- زر النسخ -->
+    <button class="btn" onclick="document.getElementById('copy-input').click()">نسخ</button>
+    <input type="file" id="copy-input" style="display:none;" onchange="handleCopySelect(event)">
+    
+    <!-- زر اللصق -->
+    <button class="btn" onclick="pasteSelected()">لصق</button>
+  </div>
+
+  <main>
+    <div id="file-container" class="file-list">
+      <div style="text-align:center; color:var(--text-dim); padding:20px;">اضغطي على "اختيار ملف" للبدء</div>
+    </div>
+  </main>
+
+  <!-- Split Modal -->
+  <div id="split-modal" class="modal">
+    <div class="modal-content">
+      <h3>تقسيم الملف إلى أجزاء</h3>
+      <label>حجم الجزء (بالمايجابايت - MB):</label>
+      <input type="number" id="chunk-size" value="5" min="1">
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button class="btn" onclick="closeModals()">إلغاء</button>
+        <button class="btn btn-accent" onclick="executeSplit()">تقسيم الآن</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Merge Modal -->
+  <div id="merge-modal" class="modal">
+    <div class="modal-content">
+      <h3>دمج أجزاء الملفات</h3>
+      <p style="font-size:0.85rem; color:var(--text-dim);">اختر أجزاء الملف المقسمة لدمجها في ملف واحد جديد.</p>
+      <input type="file" id="merge-files-input" multiple>
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:10px;">
+        <button class="btn" onclick="closeModals()">إلغاء</button>
+        <button class="btn btn-accent" onclick="executeMerge()">دمج الآن</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentTab = 'local';
+    let selectedFile = null;
+    let clipboardFile = null;
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      if (tab === 'drive') {
+        document.getElementById('file-container').innerHTML = '<div style="text-align:center; padding:20px;">يرجى ربط جوجل درايف للوصول للملفات السحابية.</div>';
+      } else {
+        renderLocalView();
+      }
+    }
+
+    function handleFileSelect(event) {
+      selectedFile = event.target.files[0];
+      if (selectedFile) {
+        renderLocalView();
+      }
+    }
+
+    function renderLocalView() {
+      const container = document.getElementById('file-container');
+      if (!selectedFile) {
+        container.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:20px;">لم يتم تحديد أي ملف بعد.</div>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="file-item">
+          <div class="file-info">
+            <span class="file-icon">📄</span>
+            <div>
+              <div><strong>${selectedFile.name}</strong></div>
+              <div style="font-size:0.8rem; color:var(--text-dim);">${(selectedFile.size / (1024*1024)).toFixed(2)} MB</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function handleCopySelect(event) {
+      const file = event.target.files[0];
+      if (file) {
+        clipboardFile = file;
+        alert(`تم النسخ بنجاح للملف: ${file.name}\nاضغطي على "لصق" واختاري المكان الذي تريدين حفظ النسخة فيه.`);
+      }
+    }
+
+    async function pasteSelected() {
+      if (!clipboardFile) {
+        return alert('الرجاء الضغط على "نسخ" أولاً واختيار الملف!');
+      }
+
+      // استخدام ShowSaveFilePicker إذا كان المتصفح يدعمه لفتح شباك "حفظ باسم" في المجلد المطلوب
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: `copy_${clipboardFile.name}`
+          });
+          const writable = await handle.createWritable();
+          await writable.write(clipboardFile);
+          await writable.close();
+          alert('تم لصق وحفظ الملف بنجاح في المكان المحدد!');
+        } catch (err) {
+          // في حالة إلغاء الشباك من قبل المستخدم
+        }
+      } else {
+        // بديل احتياطي للمتصفحات القديمة
+        const blobUrl = URL.createObjectURL(clipboardFile);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `copy_${clipboardFile.name}`;
+        a.click();
+      }
+    }
+
+    function openSplitModal() {
+      if (!selectedFile) return alert('الرجاء اختيار ملف أولاً!');
+      document.getElementById('split-modal').style.display = 'flex';
+    }
+
+    function openMergeModal() {
+      document.getElementById('merge-modal').style.display = 'flex';
+    }
+
+    function closeModals() {
+      document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    }
+
+    async function executeSplit() {
+      const chunkSizeMB = parseFloat(document.getElementById('chunk-size').value);
+      const chunkSize = chunkSizeMB * 1024 * 1024;
+      const totalChunks = Math.ceil(selectedFile.size / chunkSize);
+
+      closeModals();
+
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(selectedFile.size, start + chunkSize);
+        const chunk = selectedFile.slice(start, end);
+
+        const blobUrl = URL.createObjectURL(chunk);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `${selectedFile.name}.part${i + 1}`;
+        a.click();
+      }
+
+      alert('تم تقسيم الملف وتحميل الأجزاء بنجاح!');
+      renderLocalView();
+    }
+
+    async function executeMerge() {
+      const input = document.getElementById('merge-files-input');
+      const files = Array.from(input.files);
+      if (files.length < 2) return alert('اختر ملفين أو أكثر للدمج!');
+
+      files.sort((a, b) => a.name.localeCompare(b.name));
+
+      closeModals();
+      const mergedBlob = new Blob(files);
+      const outputName = files[0].name.replace(/\.part\d+$/, '') || 'merged_file';
+
+      const blobUrl = URL.createObjectURL(mergedBlob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `merged_${outputName}`;
+      a.click();
+
+      alert('تم دمج الملفات بنجاح!');
+    }
+  </script>
+</body>
+</html>
