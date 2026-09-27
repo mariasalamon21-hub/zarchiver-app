@@ -1,5 +1,5 @@
 {
-  "name": "ZArchiver App",
+  "name": "ZArchiver Desktop",
   "short_name": "ZArchiver",
   "start_url": "./index.html",
   "display": "standalone",
