@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
-    "build": "npx cap copy && npx cap sync",
-    "electron:build": "npm run build && electron-builder --win --publish never"
+    "build": "mkdir www && echo ^<html^>^<body^>^<h1^>App^</h1^>^</body^>^</html^> > www/index.html",
+    "electron:build": "npm run build && npx cap copy && npx cap sync && electron-builder --win --publish never"
   },
   "devDependencies": {
     "@capacitor/cli": "^5.0.0",
