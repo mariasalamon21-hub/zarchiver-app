@@ -1,0 +1,17 @@
+{
+  "name": "zarchiver-app",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "build": "echo 'Building...'"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^5.0.0",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^5.0.0",
+    "@capacitor/core": "^5.0.0"
+  }
+}
