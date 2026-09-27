@@ -9,18 +9,56 @@ jobs:
   build-windows:
     name: Build Windows Exe
     runs-on: windows-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 18
 
       - name: Install Dependencies
         run: npm install
 
       - name: Build Windows Executable
-        run: npm run electron:build
+        run: npx electron-builder --win -c.publish=never
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZArchiver-Windows-Setup
+          path: dist/*.exe
+
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Prepare Web Assets & Build APK
+        run: |
+          npm install
+          mkdir -p www
+          cp -r index.html manifest.json sw.js main.js www/ 2>/dev/null || true
+          npx cap add android || true
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Android Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZArchiver-Android-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
