@@ -1,6 +1,5 @@
 {
   "appId": "com.zarchiver.app",
   "appName": "ZArchiver",
-  "webDir": ".",
-  "bundledWebRuntime": false
+  "webDir": "www"
 }
